@@ -1,0 +1,1049 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SISTEMA MAESTRO DE AUDITORÃAS HyS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Suprimir advertencia de desarrollo
+      const originalConsoleError = console.error;
+      console.error = function (...args) {
+        if (
+          args[0] &&
+          args[0].includes &&
+          args[0].includes("cdn.tailwindcss.com")
+        ) {
+          return; // Ignorar la advertencia de Tailwind
+        }
+        originalConsoleError.apply(console, args);
+      };
+    </script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <style>
+      .checklist-item-yes {
+        @apply bg-green-100 border-green-300;
+      }
+      .checklist-item-no {
+        @apply bg-red-100 border-red-300;
+      }
+      .checklist-item-pending {
+        @apply bg-yellow-100 border-yellow-300;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      const ChecklistApp = () => {
+        const [activeTab, setActiveTab] = useState("client-info");
+        const [selectedChecklist, setSelectedChecklist] = useState("prep");
+        const [clientData, setClientData] = useState({
+          company: "",
+          cuit: "",
+          address: "",
+          phone: "",
+          email: "",
+          sector: "",
+          workers: "",
+          visitDate: new Date().toISOString().split("T")[0],
+          inspector: "",
+        });
+
+        const [checklistItems, setChecklistItems] = useState({});
+        const [observations, setObservations] = useState("");
+
+        const checklists = {
+          prep: {
+            name: "1. Checklist de PreparaciÃ³n de la AuditorÃ­a",
+            items: [
+              "[PlanificaciÃ³n] Objetivo de la auditorÃ­a definido",
+              "[PlanificaciÃ³n] Alcance de la auditorÃ­a establecido",
+              "[PlanificaciÃ³n] InformaciÃ³n general del cliente recopilada",
+              "[PlanificaciÃ³n] Procesos / actividades a auditar identificados",
+              "[PlanificaciÃ³n] Normativa legal aplicable identificada",
+              "[PlanificaciÃ³n] Riesgos y aspectos significativos previos analizados",
+              "[PlanificaciÃ³n] Cronograma de la auditorÃ­a planificado",
+              "[PlanificaciÃ³n] Sectores / Ã¡reas a recorrer definidos",
+              "[PlanificaciÃ³n] Personal clave a entrevistar identificado",
+              "[PlanificaciÃ³n] ComunicaciÃ³n de la auditorÃ­a al cliente realizada",
+              "[DocumentaciÃ³n previa] PolÃ­tica de Seguridad y Salud revisada",
+              "[DocumentaciÃ³n previa] Programa de Seguridad revisado",
+              "[DocumentaciÃ³n previa] EvaluaciÃ³n de riesgos disponible",
+              "[DocumentaciÃ³n previa] Capacitaciones y registros revisados",
+              "[DocumentaciÃ³n previa] InvestigaciÃ³n de accidentes revisada",
+              "[DocumentaciÃ³n previa] Informes de auditorÃ­as anteriores revisados",
+              "[DocumentaciÃ³n previa] Permisos / habilitaciones verificadas",
+              "[DocumentaciÃ³n previa] Procedimientos e instructivos revisados",
+              "[DocumentaciÃ³n previa] Plan de emergencia revisado",
+              "[DocumentaciÃ³n previa] Otra documentaciÃ³n relevante revisada",
+              "[Recursos y equipos] CÃ¡mara / celular para registro fotogrÃ¡fico",
+              "[Recursos y equipos] Linterna",
+              "[Recursos y equipos] Cinta mÃ©trica",
+              "[Recursos y equipos] Checklists impresos o digitales",
+              "[Recursos y equipos] Formularios de registros",
+              "[Recursos y equipos] Laptop / tablet (si corresponde)",
+              "[Recursos y equipos] BolÃ­grafos / planillas",
+              "[Recursos y equipos] EPP personal completo",
+              "[Recursos y equipos] IdentificaciÃ³n personal / credencial",
+              "[Recursos y equipos] BotiquÃ­n bÃ¡sico",
+              "[Recursos y equipos] Detector de gases (si corresponde)",
+              "[Recursos y equipos] LuxÃ³metro (si corresponde)",
+              "[Recursos y equipos] SonÃ³metro (si corresponde)",
+              "[Recursos y equipos] Otro equipo especÃ­fico",
+            ],
+          },
+          firstVisit: {
+            name: "2. Checklist de Primera Visita al Cliente",
+            items: [
+              "[InformaciÃ³n general] Â¿La empresa cuenta con medidas de prevenciÃ³n implementadas?",
+              "[InformaciÃ³n general] Â¿Existe responsable de Higiene y Seguridad designado?",
+              "[InformaciÃ³n general] Â¿Poseen servicio de Higiene y Seguridad externo?",
+              "[InformaciÃ³n general] Â¿Cuentan con ComitÃ© de Seguridad e Higiene?",
+              "[InformaciÃ³n general] Â¿Existe polÃ­tica de Seguridad documentada?",
+              "[InformaciÃ³n general] Â¿Cuentan con objetivos o metas de Seguridad?",
+              "[InformaciÃ³n general] Â¿Se realizan evaluaciones de riesgos?",
+              "[InformaciÃ³n general] Â¿Se investigan los accidentes e incidentes?",
+              "[InformaciÃ³n general] Â¿Se realizan capacitaciones al personal?",
+              "[InformaciÃ³n general] Â¿Se entregan Elementos de ProtecciÃ³n Personal?",
+              "[InformaciÃ³n general] Â¿La empresa cuenta con Programa de Seguridad?",
+              "[Relevamiento inicial] Â¿Se realizÃ³ un recorrido general por todas las Ã¡reas?",
+              "[Relevamiento inicial] Â¿Se identificaron procesos y actividades principales?",
+              "[Relevamiento inicial] Â¿Se detectaron Ã¡reas o tareas crÃ­ticas?",
+              "[Relevamiento inicial] Â¿Existen sectores de almacenamiento?",
+              "[Relevamiento inicial] Â¿Se observaron riesgos significativos evidentes?",
+              "[Relevamiento inicial] Â¿El estado general de orden y limpieza es adecuado?",
+              "[Relevamiento inicial] Â¿Las vÃ­as de circulaciÃ³n y evacuaciÃ³n estÃ¡n libres?",
+              "[Relevamiento inicial] Â¿La seÃ±alizaciÃ³n es visible y comprensible?",
+              "[Relevamiento inicial] Â¿Los equipos de emergencia son accesibles?",
+              "[Relevamiento inicial] Â¿Se identificaron contratistas o personal externo?",
+              "[DocumentaciÃ³n disponible] Programa de Seguridad / Plan anual",
+              "[DocumentaciÃ³n disponible] EvaluaciÃ³n de Riesgos",
+              "[DocumentaciÃ³n disponible] Registros de CapacitaciÃ³n",
+              "[DocumentaciÃ³n disponible] Registros de Entrega de EPP",
+              "[DocumentaciÃ³n disponible] EstadÃ­sticas de Accidentes",
+              "[DocumentaciÃ³n disponible] Plan de Emergencia",
+              "[DocumentaciÃ³n disponible] Permisos / Habilitaciones",
+              "[DocumentaciÃ³n disponible] Otra documentaciÃ³n relevante",
+            ],
+          },
+          general: {
+            name: "3. Checklist General de AuditorÃ­a HyS",
+            items: [
+              "[Orden y limpieza] Pasillos y salidas libres de obstÃ¡culos",
+              "[Orden y limpieza] Ãreas de trabajo ordenadas",
+              "[Orden y limpieza] Pisos limpios y en buen estado",
+              "[Orden y limpieza] Residuos y materiales almacenados correctamente",
+              "[Orden y limpieza] Contenedores identificados y en buen estado",
+              "[Circulaciones y salidas] Circulaciones demarcadas y despejadas",
+              "[Circulaciones y salidas] Salidas de emergencia seÃ±alizadas",
+              "[Circulaciones y salidas] Salidas de emergencia operativas",
+              "[Circulaciones y salidas] Rutas de evacuaciÃ³n libres",
+              "[Circulaciones y salidas] Puertas de emergencia sin obstrucciones",
+              "[SeÃ±alizaciÃ³n] SeÃ±alizaciÃ³n visible y comprensible",
+              "[SeÃ±alizaciÃ³n] SeÃ±ales de advertencia en riesgos presentes",
+              "[SeÃ±alizaciÃ³n] SeÃ±ales de obligaciÃ³n en su lugar",
+              "[SeÃ±alizaciÃ³n] SeÃ±ales de prohibiciÃ³n en su lugar",
+              "[SeÃ±alizaciÃ³n] SeÃ±ales de emergencia en buen estado",
+              "[EPP] EPP disponible segÃºn riesgos del puesto",
+              "[EPP] EPP en buen estado",
+              "[EPP] Uso correcto de EPP por parte del personal",
+              "[EPP] CapacitaciÃ³n sobre uso de EPP realizada",
+              "[EPP] Registro de entrega de EPP actualizado",
+              "[MÃ¡quinas y equipos] Guardas y protecciones en su lugar",
+              "[MÃ¡quinas y equipos] Botones de parada de emergencia operativos",
+              "[MÃ¡quinas y equipos] Mantenimiento preventivo al dÃ­a",
+              "[MÃ¡quinas y equipos] SeÃ±alizaciÃ³n de riesgos en mÃ¡quinas",
+              "[MÃ¡quinas y equipos] Personal capacitado para operarlas",
+              "[Instalaciones elÃ©ctricas] Tableros elÃ©ctricos cerrados y seÃ±alizados",
+              "[Instalaciones elÃ©ctricas] Protecciones (tÃ©rmicas/diferenciales) adecuadas",
+              "[Instalaciones elÃ©ctricas] Cableado en buen estado y canalizado",
+              "[Instalaciones elÃ©ctricas] Puestas a tierra verificadas",
+              "[Instalaciones elÃ©ctricas] Tomas y enchufes en buen estado",
+              "[Instalaciones elÃ©ctricas] Ausencia de conexiones improvisadas",
+              "[PrevenciÃ³n de incendios] Extintores presentes y vigentes",
+              "[PrevenciÃ³n de incendios] Extintores seÃ±alizados y accesibles",
+              "[PrevenciÃ³n de incendios] Hidrantes operativos",
+              "[PrevenciÃ³n de incendios] Alarma y detectores operativos",
+              "[PrevenciÃ³n de incendios] Luces de emergencia operativas",
+              "[PrevenciÃ³n de incendios] Plan de evacuaciÃ³n publicado",
+              "[PrevenciÃ³n de incendios] Carga de fuego controlada",
+              "[ErgonomÃ­a] Puestos de trabajo ergonÃ³micos",
+              "[ErgonomÃ­a] Posturas forzadas identificadas",
+              "[ErgonomÃ­a] ManipulaciÃ³n manual de cargas controlada",
+              "[ErgonomÃ­a] Pausas activas implementadas",
+              "[ErgonomÃ­a] IluminaciÃ³n adecuada para la tarea",
+              "[Sustancias quÃ­micas] Sustancias identificadas y etiquetadas",
+              "[Sustancias quÃ­micas] Hojas de seguridad disponibles",
+              "[Sustancias quÃ­micas] Almacenamiento adecuado",
+              "[Sustancias quÃ­micas] VentilaciÃ³n adecuada",
+              "[Sustancias quÃ­micas] Kits de derrames disponibles",
+              "[DocumentaciÃ³n y registros] Programa de Seguridad vigente",
+              "[DocumentaciÃ³n y registros] EvaluaciÃ³n de riesgos actualizada",
+              "[DocumentaciÃ³n y registros] Capacitaciones registradas",
+              "[DocumentaciÃ³n y registros] InvestigaciÃ³n de incidentes documentada",
+              "[DocumentaciÃ³n y registros] ExÃ¡menes mÃ©dicos ocupacionales al dÃ­a",
+              "[DocumentaciÃ³n y registros] Registro de entrega de EPP actualizado",
+              "[Emergencias] Plan de emergencia conocido por el personal",
+              "[Emergencias] Simulacros realizados y registrados",
+              "[Emergencias] Brigada de emergencia conformada",
+              "[Emergencias] Equipos de emergencia disponibles",
+              "[Emergencias] Puntos de reuniÃ³n seÃ±alizados",
+              "[Emergencias] ComunicaciÃ³n de emergencias definida",
+            ],
+          },
+          orderClean: {
+            name: "4. Checklist de Orden y Limpieza",
+            items: [
+              "[Circulaciones] Pasillos y salidas libres de obstÃ¡culos",
+              "[Circulaciones] Anchos de circulaciÃ³n adecuados",
+              "[Circulaciones] Rutas de evacuaciÃ³n libres y despejadas",
+              "[Circulaciones] Puertas y portones sin obstrucciones",
+              "[Circulaciones] Zonas de carga / descarga ordenadas",
+              "[Almacenamiento] Materiales almacenados en su lugar asignado",
+              "[Almacenamiento] EstanterÃ­as y racks en buen estado y ordenados",
+              "[Almacenamiento] Cargas apiladas de forma segura y estable",
+              "[Almacenamiento] Altura de apilamiento segura y seÃ±alizada",
+              "[Almacenamiento] Productos pesados en niveles inferiores",
+              "[Residuos y desechos] Contenedores identificados y en buen estado",
+              "[Residuos y desechos] Residuos clasificados segÃºn su tipo",
+              "[Residuos y desechos] Retiro de residuos en frecuencia adecuada",
+              "[Residuos y desechos] No hay acumulaciÃ³n de residuos en el Ã¡rea",
+              "[Residuos y desechos] Residuos peligrosos almacenados correctamente",
+              "[Pisos y superficies] Pisos limpios y secos",
+              "[Pisos y superficies] Sin derrames de lÃ­quidos o sustancias",
+              "[Pisos y superficies] Superficies de trabajo limpias y ordenadas",
+              "[Pisos y superficies] Sin acumulaciÃ³n de polvo o suciedad",
+              "[Pisos y superficies] Rejillas, desagÃ¼es y canaletas limpias",
+              "[IluminaciÃ³n y ventilaciÃ³n] IluminaciÃ³n adecuada para las tareas",
+              "[IluminaciÃ³n y ventilaciÃ³n] Luminarias limpias y en buen estado",
+              "[IluminaciÃ³n y ventilaciÃ³n] VentilaciÃ³n natural o forzada adecuada",
+              "[IluminaciÃ³n y ventilaciÃ³n] Sin obstrucciones en ventanas o rejillas",
+              "[IluminaciÃ³n y ventilaciÃ³n] Ãreas oscuras o mal iluminadas identificadas",
+              "[Escaleras y accesos] Escaleras libres de objetos",
+              "[Escaleras y accesos] PeldaÃ±os en buen estado y limpios",
+              "[Escaleras y accesos] Barandas y pasamanos limpios y seguros",
+              "[Escaleras y accesos] Accesos a plataformas despejados",
+              "[Escaleras y accesos] SeÃ±alizaciÃ³n de Ã¡reas de riesgo presente",
+            ],
+          },
+          electrical: {
+            name: "5. Checklist de Riesgo ElÃ©ctrico",
+            items: [
+              "[Tableros elÃ©ctricos] Tableros elÃ©ctricos cerrados y seÃ±alizados",
+              "[Tableros elÃ©ctricos] Puertas o tapas en buen estado y con llave",
+              "[Protecciones] Disyuntores termomagnÃ©ticos / diferenciales adecuados y funcionando correctamente",
+              "[Protecciones] Protecciones calibradas segÃºn la carga",
+              "[Puesta a tierra] Puesta a tierra realizada y en buen estado",
+              "[Puesta a tierra] Conexiones firmes, visibles y sin corrosiÃ³n",
+              "[Cables y conductores] Cables y conductores en buen estado (sin cortes, desgastes ni empalmes peligrosos)",
+              "[Cables y conductores] Canalizaciones protegidas y correctamente fijadas",
+              "[Tomas y enchufes] Tomas y enchufes en buen estado",
+              "[Tomas y enchufes] No se utilizan adaptadores mÃºltiples ni \"zapatillas\" en forma permanente",
+              "[Ausencia de sobrecargas] No se observan cables sobrecalentados",
+              "[Ausencia de sobrecargas] No hay conexiones forzadas ni riesgosas",
+              "[Equipos elÃ©ctricos] Equipos elÃ©ctricos con mantenimiento preventivo vigente",
+              "[Equipos elÃ©ctricos] Carcasas, fichas y cables sin daÃ±os",
+              "[Bloqueos y etiquetado (LOTO)] Existen procedimientos de bloqueo y etiquetado",
+              "[Bloqueos y etiquetado (LOTO)] Los equipos cuentan con dispositivos de seccionamiento accesibles",
+              "[IluminaciÃ³n] IluminaciÃ³n adecuada para las tareas",
+              "[IluminaciÃ³n] Luminarias Ã­ntegras, limpias y correctamente fijadas",
+              "[SeÃ±alizaciÃ³n] SeÃ±alizaciÃ³n de riesgo elÃ©ctrico presente y visible",
+              "[SeÃ±alizaciÃ³n] CartelerÃ­a en tableros y salas elÃ©ctricas",
+              "[Personal] Personal capacitado y autorizado para trabajos elÃ©ctricos",
+              "[Personal] Uso de EPP especÃ­fico para tareas elÃ©ctricas",
+              "[DocumentaciÃ³n] Esquemas elÃ©ctricos disponibles y actualizados",
+              "[DocumentaciÃ³n] Registros de inspecciones y mediciones elÃ©ctricas vigentes",
+            ],
+          },
+          fire: {
+            name: "6. Checklist de PrevenciÃ³n de Incendios",
+            items: [
+              "[Extintores] Extintores presentes y en cantidad adecuada",
+              "[Extintores] Extintores seÃ±alizados y de fÃ¡cil acceso",
+              "[Extintores] Extintores con carga vigente",
+              "[Extintores] Extintores en buen estado fÃ­sico y sin obstrucciones",
+              "[Extintores] Tipo de extintor adecuado al riesgo presente",
+              "[Hidrantes y mangueras] Hidrantes operativos y en buen estado",
+              "[Hidrantes y mangueras] Mangueras en buen estado y correctamente conectadas",
+              "[Hidrantes y mangueras] Gabinetes de hidrantes seÃ±alizados y accesibles",
+              "[Hidrantes y mangueras] PresiÃ³n de agua adecuada",
+              "[Hidrantes y mangueras] Inspecciones y pruebas periÃ³dicas registradas",
+              "[Alarmas y detecciÃ³n] Alarmas y detectores instalados",
+              "[Alarmas y detecciÃ³n] Funcionamiento correcto verificado",
+              "[Alarmas y detecciÃ³n] SeÃ±alizaciÃ³n de alarmas visible",
+              "[Alarmas y detecciÃ³n] Mantenimiento preventivo realizado",
+              "[Alarmas y detecciÃ³n] Personal conoce el sistema de alarma",
+              "[Salidas de emergencia] Salidas de emergencia seÃ±alizadas y visibles",
+              "[Salidas de emergencia] Salidas libres de obstrucciones",
+              "[Salidas de emergencia] Puertas de emergencia abren hacia afuera",
+              "[Salidas de emergencia] Barras antipÃ¡nico en buen estado",
+              "[Salidas de emergencia] IluminaciÃ³n de emergencia operativa",
+              "[IluminaciÃ³n de emergencia] Luces de emergencia instaladas",
+              "[IluminaciÃ³n de emergencia] Luces operativas y con baterÃ­a cargada",
+              "[IluminaciÃ³n de emergencia] Pruebas periÃ³dicas realizadas y registradas",
+              "[IluminaciÃ³n de emergencia] AutonomÃ­a suficiente segÃºn normativa",
+              "[IluminaciÃ³n de emergencia] SeÃ±alizaciÃ³n fotoluminiscente en buen estado",
+              "[DocumentaciÃ³n y planes] Plan de evacuaciÃ³n actualizado y disponible",
+              "[DocumentaciÃ³n y planes] Croquis de evacuaciÃ³n visibles",
+              "[DocumentaciÃ³n y planes] Brigada de emergencia conformada",
+              "[DocumentaciÃ³n y planes] Capacitaciones y simulacros registrados",
+              "[DocumentaciÃ³n y planes] Permisos y habilitaciones vigentes",
+            ],
+          },
+          epp: {
+            name: "7. Checklist de Uso de Elementos de ProtecciÃ³n Personal (EPP)",
+            items: [
+              "[Disponibilidad] Los EPP necesarios estÃ¡n disponibles en cantidad suficiente",
+              "[Disponibilidad] Los EPP son adecuados al riesgo presente",
+              "[Disponibilidad] Los EPP cumplen con normas y certificaciones vigentes",
+              "[Uso correcto] El personal utiliza los EPP de forma correcta",
+              "[Uso correcto] El uso es permanente durante la tarea",
+              "[Uso correcto] Los EPP se ajustan adecuadamente al usuario",
+              "[Estado y mantenimiento] Los EPP se encuentran en buen estado",
+              "[Estado y mantenimiento] No presentan daÃ±os, roturas o desgaste",
+              "[Estado y mantenimiento] Se realiza limpieza y mantenimiento segÃºn indicaciones",
+              "[CapacitaciÃ³n y concientizaciÃ³n] El personal ha recibido capacitaciÃ³n sobre el uso de EPP",
+              "[CapacitaciÃ³n y concientizaciÃ³n] Se conoce la importancia del uso de EPP",
+              "[CapacitaciÃ³n y concientizaciÃ³n] Existen registros de capacitaciÃ³n actualizados",
+              "[GestiÃ³n y control] Existe responsable designado para la gestiÃ³n de EPP",
+              "[GestiÃ³n y control] Se verifica periÃ³dicamente el estado de los EPP",
+              "[GestiÃ³n y control] Se registran y gestionan reemplazos cuando corresponde",
+            ],
+          },
+          machinery: {
+            name: "8. Checklist de MÃ¡quinas y Equipos",
+            items: [
+              "[Estado general] La mÃ¡quina/equipo se encuentra en buen estado",
+              "[Estado general] No presenta daÃ±os visibles, fugas o corrosiÃ³n",
+              "[Estado general] Las partes estructurales estÃ¡n firmes y seguras",
+              "[Protecciones y resguardos] Los resguardos estÃ¡n instalados correctamente",
+              "[Protecciones y resguardos] No se han retirado o modificado sin autorizaciÃ³n",
+              "[Protecciones y resguardos] Impiden el acceso a partes mÃ³viles o peligrosas",
+              "[Controles y dispositivos] Los controles funcionan correctamente",
+              "[Controles y dispositivos] Los botones de paro de emergencia operan bien",
+              "[Controles y dispositivos] Las seÃ±ales e indicadores son visibles y legibles",
+              "[Sistema elÃ©ctrico] El cableado estÃ¡ en buen estado",
+              "[Sistema elÃ©ctrico] Los tableros elÃ©ctricos estÃ¡n cerrados y seguros",
+              "[Sistema elÃ©ctrico] Cuenta con puesta a tierra y protecciones",
+              "[Mantenimiento] Se realiza mantenimiento segÃºn lo programado",
+              "[Mantenimiento] Cuenta con registros de mantenimiento actualizados",
+              "[Mantenimiento] Se han atendido fallas o recomendaciones previas",
+              "[LubricaciÃ³n y condiciones operativas] Los puntos de lubricaciÃ³n estÃ¡n en buen estado",
+              "[LubricaciÃ³n y condiciones operativas] No hay ruidos anormales ni vibraciones excesivas",
+              "[LubricaciÃ³n y condiciones operativas] La mÃ¡quina opera dentro de parÃ¡metros normales",
+              "[DocumentaciÃ³n y seÃ±alizaciÃ³n] Cuenta con manual de operaciÃ³n disponible",
+              "[DocumentaciÃ³n y seÃ±alizaciÃ³n] La seÃ±alizaciÃ³n de seguridad estÃ¡ visible",
+              "[DocumentaciÃ³n y seÃ±alizaciÃ³n] Las instrucciones estÃ¡n en el idioma del operador",
+              "[Operadores y autorizaciÃ³n] Solo personal autorizado opera la mÃ¡quina",
+              "[Operadores y autorizaciÃ³n] El operador conoce los riesgos y procedimientos",
+              "[Operadores y autorizaciÃ³n] Utiliza los EPP requeridos para la operaciÃ³n",
+              "[Limpieza del equipo] La mÃ¡quina se mantiene limpia de polvo y residuos",
+              "[Limpieza del equipo] No hay acumulaciÃ³n de grasa o aceite",
+              "[Limpieza del equipo] El Ã¡rea alrededor estÃ¡ limpia y libre de obstÃ¡culos",
+              "[Mejora continua] Se han identificado oportunidades de mejora",
+              "[Mejora continua] Se implementan acciones correctivas y preventivas",
+              "[Mejora continua] Se promueve una cultura de seguridad y cuidado",
+            ],
+          },
+          chemicals: {
+            name: "9. Checklist de Sustancias QuÃ­micas",
+            items: [
+              "[IdentificaciÃ³n y etiquetado] Todas las sustancias quÃ­micas estÃ¡n identificadas",
+              "[IdentificaciÃ³n y etiquetado] Las etiquetas contienen nombre, pictogramas y riesgos",
+              "[IdentificaciÃ³n y etiquetado] Las fichas de datos de seguridad (FDS) estÃ¡n disponibles",
+              "[IdentificaciÃ³n y etiquetado] Los envases estÃ¡n en buen estado y cerrados",
+              "[Almacenamiento] Las sustancias quÃ­micas estÃ¡n almacenadas en Ã¡reas designadas",
+              "[Almacenamiento] Los recipientes estÃ¡n sobre superficies adecuadas",
+              "[Almacenamiento] Hay separaciÃ³n entre sustancias incompatibles",
+              "[Almacenamiento] Las Ã¡reas de almacenamiento estÃ¡n ventiladas",
+              "[ManipulaciÃ³n y uso] El personal sigue los procedimientos establecidos",
+              "[ManipulaciÃ³n y uso] Se usan los EPP adecuados para cada sustancia",
+              "[ManipulaciÃ³n y uso] No se realizan trasvases innecesarios",
+              "[ManipulaciÃ³n y uso] Se evita la generaciÃ³n de vapores o aerosoles",
+              "[SeÃ±alizaciÃ³n y advertencias] Las Ã¡reas con quÃ­micos estÃ¡n seÃ±alizadas",
+              "[SeÃ±alizaciÃ³n y advertencias] Existen advertencias de peligro visibles",
+              "[SeÃ±alizaciÃ³n y advertencias] Las rutas de evacuaciÃ³n estÃ¡n despejadas",
+              "[SeÃ±alizaciÃ³n y advertencias] Hay instrucciones de emergencia visibles",
+              "[Control de derrames] Existen kits de derrames disponibles y completos",
+              "[Control de derrames] El personal conoce el procedimiento de respuesta",
+              "[Control de derrames] Los derrames se limpian de forma segura",
+              "[Control de derrames] Los residuos generados se disponen correctamente",
+              "[DisposiciÃ³n de residuos quÃ­micos] Los residuos quÃ­micos se identifican correctamente",
+              "[DisposiciÃ³n de residuos quÃ­micos] Se almacenan en recipientes adecuados",
+              "[DisposiciÃ³n de residuos quÃ­micos] Se realiza disposiciÃ³n final con gestor autorizado",
+              "[DisposiciÃ³n de residuos quÃ­micos] Se mantienen registros de disposiciÃ³n",
+              "[Primeros auxilios y emergencias] Hay estaciones de primeros auxilios disponibles",
+              "[Primeros auxilios y emergencias] El personal conoce las medidas de primeros auxilios",
+              "[Primeros auxilios y emergencias] Hay duchas/lavaojos operativos y accesibles",
+              "[Primeros auxilios y emergencias] Se han realizado simulacros o capacitaciones",
+              "[DocumentaciÃ³n y control] Se mantienen inventarios actualizados",
+              "[DocumentaciÃ³n y control] Se llevan registros de entradas y salidas",
+              "[DocumentaciÃ³n y control] Las FDS estÃ¡n actualizadas y disponibles",
+              "[DocumentaciÃ³n y control] Se realizan simulacros del inventario",
+            ],
+          },
+          heights: {
+            name: "10. Checklist de Trabajos en Altura y Escaleras",
+            items: [
+              "[PlanificaciÃ³n y autorizaciÃ³n] El trabajo en altura estÃ¡ planificado",
+              "[PlanificaciÃ³n y autorizaciÃ³n] Se cuenta con permiso de trabajo en altura vigente",
+              "[PlanificaciÃ³n y autorizaciÃ³n] El personal estÃ¡ capacitado y autorizado",
+              "[PlanificaciÃ³n y autorizaciÃ³n] Se evalÃºan riesgos antes de iniciar el trabajo",
+              "[Equipos de protecciÃ³n personal] El arnÃ©s es adecuado y estÃ¡ en buen estado",
+              "[Equipos de protecciÃ³n personal] La lÃ­nea de vida / cabo de vida estÃ¡ en buen estado",
+              "[Equipos de protecciÃ³n personal] Los conectores y mosquetones funcionan correctamente",
+              "[Equipos de protecciÃ³n personal] El trabajador usa el EPP correctamente",
+              "[Sistemas de anclaje y lÃ­neas de vida] Los puntos de anclaje son seguros y certificados",
+              "[Sistemas de anclaje y lÃ­neas de vida] La lÃ­nea de vida estÃ¡ correctamente instalada",
+              "[Sistemas de anclaje y lÃ­neas de vida] El sistema limita la caÃ­da libre a menos de 1.8 m",
+              "[Sistemas de anclaje y lÃ­neas de vida] Se inspecciona el sistema antes de cada uso",
+              "[Andamios y plataformas] El andamio/plataforma estÃ¡ armado correctamente",
+              "[Andamios y plataformas] Las plataformas estÃ¡n completas y aseguradas",
+              "[Andamios y plataformas] Cuenta con barandas, rodapiÃ©s y accesos seguros",
+              "[Andamios y plataformas] El andamio tiene inspecciÃ³n vigente",
+              "[Escaleras portÃ¡tiles] La escalera es adecuada para la tarea",
+              "[Escaleras portÃ¡tiles] EstÃ¡ en buen estado (largueros, peldaÃ±os, zapatas)",
+              "[Escaleras portÃ¡tiles] Se usa con inclinaciÃ³n correcta (relaciÃ³n 4:1)",
+              "[Escaleras portÃ¡tiles] Sobresale 1 m del punto de apoyo superior",
+              "[Ãrea de trabajo] El Ã¡rea bajo el trabajo en altura estÃ¡ delimitada",
+              "[Ãrea de trabajo] No hay personas en zonas de riesgo",
+              "[Ãrea de trabajo] Las herramientas estÃ¡n aseguradas contra caÃ­da",
+              "[Ãrea de trabajo] Las condiciones climÃ¡ticas son seguras",
+              "[Emergencias y rescate] Existe plan de rescate para trabajos en altura",
+              "[Emergencias y rescate] El personal conoce los procedimientos de rescate",
+              "[Emergencias y rescate] Hay equipos de rescate disponibles",
+              "[Emergencias y rescate] Se realizan simulacros o prÃ¡cticas de rescate",
+              "[Inspecciones y mantenimiento] Los EPP tienen inspecciÃ³n vigente",
+              "[Inspecciones y mantenimiento] Equipos y sistemas se revisan periÃ³dicamente",
+              "[Inspecciones y mantenimiento] Se registra el mantenimiento y las inspecciones",
+              "[Inspecciones y mantenimiento] Se corrigen inmediatamente las condiciones inseguras",
+            ],
+          },
+          signaling: {
+            name: "11. Checklist de SeÃ±alizaciÃ³n y Seguridad",
+            items: [
+              "[SeÃ±alizaciÃ³n de evacuaciÃ³n] Las rutas de evacuaciÃ³n estÃ¡n seÃ±alizadas",
+              "[SeÃ±alizaciÃ³n de evacuaciÃ³n] Las salidas de emergencia son visibles y accesibles",
+              "[SeÃ±alizaciÃ³n de evacuaciÃ³n] Los puntos de reuniÃ³n estÃ¡n identificados",
+              "[SeÃ±alizaciÃ³n de evacuaciÃ³n] La seÃ±alizaciÃ³n cumple con la normativa vigente",
+              "[Equipos contra incendios] Los extintores estÃ¡n seÃ±alizados correctamente",
+              "[Equipos contra incendios] Los extintores son visibles, accesibles y sin obstrucciones",
+              "[Equipos contra incendios] La seÃ±alizaciÃ³n de gabinetes y mangueras es adecuada",
+              "[Equipos contra incendios] Se conoce el tipo de extintor y su uso",
+              "[SeÃ±alizaciÃ³n de advertencia] Se identifican riesgos con seÃ±ales de advertencia",
+              "[SeÃ±alizaciÃ³n de advertencia] Las seÃ±ales de advertencia estÃ¡n en buen estado",
+              "[SeÃ±alizaciÃ³n de advertencia] Son visibles desde los puntos de riesgo",
+              "[SeÃ±alizaciÃ³n de advertencia] La simbologÃ­a es comprensible para todos",
+              "[SeÃ±alizaciÃ³n de obligaciÃ³n] Las seÃ±ales de uso obligatorio estÃ¡n instaladas",
+              "[SeÃ±alizaciÃ³n de obligaciÃ³n] Indican claramente el EPP requerido",
+              "[SeÃ±alizaciÃ³n de obligaciÃ³n] El personal cumple con el uso del EPP",
+              "[SeÃ±alizaciÃ³n de obligaciÃ³n] Las seÃ±ales estÃ¡n limpias y en buen estado",
+              "[SeÃ±alizaciÃ³n de primeros auxilios] Los botiquines estÃ¡n seÃ±alizados",
+              "[SeÃ±alizaciÃ³n de primeros auxilios] Las estaciones de primeros auxilios son visibles",
+              "[SeÃ±alizaciÃ³n de primeros auxilios] Los telÃ©fonos de emergencia estÃ¡n indicados",
+              "[SeÃ±alizaciÃ³n de primeros auxilios] El personal conoce su ubicaciÃ³n",
+              "[SeÃ±ales de prohibiciÃ³n] Existen seÃ±ales que prohÃ­ben acciones inseguras",
+              "[SeÃ±ales de prohibiciÃ³n] Las seÃ±ales de prohibiciÃ³n son claras y visibles",
+              "[SeÃ±ales de prohibiciÃ³n] Se respeta la seÃ±alizaciÃ³n de prohibiciÃ³n",
+              "[SeÃ±ales de prohibiciÃ³n] EstÃ¡n instaladas en los puntos adecuados",
+              "[DelimitaciÃ³n de Ã¡reas y zonas] Las Ã¡reas peligrosas estÃ¡n delimitadas",
+              "[DelimitaciÃ³n de Ã¡reas y zonas] Hay demarcaciones en pisos y zonas de trÃ¡nsito",
+              "[DelimitaciÃ³n de Ã¡reas y zonas] Las demarcaciones estÃ¡n en buen estado",
+              "[DelimitaciÃ³n de Ã¡reas y zonas] Se respeta la delimitaciÃ³n de las zonas",
+              "[Mantenimiento y visibilidad] La seÃ±alizaciÃ³n se mantiene limpia y legible",
+              "[Mantenimiento y visibilidad] Hay buena iluminaciÃ³n en las seÃ±ales",
+              "[Mantenimiento y visibilidad] Se realiza revisiÃ³n periÃ³dica de la seÃ±alizaciÃ³n",
+              "[Mantenimiento y visibilidad] Se reemplazan seÃ±ales daÃ±adas o deterioradas",
+            ],
+          },
+          documentation: {
+            name: "12. Checklist de DocumentaciÃ³n HyS",
+            items: [
+              "[PolÃ­tica y objetivos] Existe PolÃ­tica de HyS documentada",
+              "[PolÃ­tica y objetivos] La polÃ­tica estÃ¡ firmada y comunicada",
+              "[PolÃ­tica y objetivos] Los objetivos de HyS estÃ¡n definidos",
+              "[PlanificaciÃ³n] Existe identificaciÃ³n de peligros y evaluaciÃ³n de riesgos",
+              "[PlanificaciÃ³n] Se cuenta con matriz de riesgos actualizada",
+              "[PlanificaciÃ³n] Existe plan anual o programa de HyS",
+              "[Procedimientos e instrucciones] Los procedimientos de HyS estÃ¡n documentados",
+              "[Procedimientos e instrucciones] Las instrucciones de trabajo son claras y actualizadas",
+              "[Procedimientos e instrucciones] Se encuentran disponibles en los lugares de trabajo",
+              "[CapacitaciÃ³n y competencia] Existe plan de capacitaciÃ³n en HyS",
+              "[CapacitaciÃ³n y competencia] Los registros de capacitaciÃ³n estÃ¡n completos",
+              "[CapacitaciÃ³n y competencia] Se verifica la competencia del personal",
+              "[GestiÃ³n de contratistas y proveedores] Existe procedimiento de gestiÃ³n de contratistas",
+              "[GestiÃ³n de contratistas y proveedores] Se cuenta con evaluaciÃ³n y selecciÃ³n de proveedores",
+              "[GestiÃ³n de contratistas y proveedores] Hay registros de inducciÃ³n y controles aplicados",
+              "[Inspecciones y mantenimiento] Existe plan de inspecciones de HyS",
+              "[Inspecciones y mantenimiento] Los registros de inspecciones estÃ¡n actualizados",
+              "[Inspecciones y mantenimiento] Existe plan y registros de mantenimiento",
+              "[Registros y control documental] Los registros se conservan de forma adecuada",
+              "[Registros y control documental] Existe control de versiones de los documentos",
+              "[Registros y control documental] Los documentos estÃ¡n identificados y vigentes",
+              "[InvestigaciÃ³n de incidentes] Existe procedimiento de investigaciÃ³n de incidentes",
+              "[InvestigaciÃ³n de incidentes] Los reportes de incidentes estÃ¡n completos",
+              "[InvestigaciÃ³n de incidentes] Se implementan acciones correctivas documentadas",
+            ],
+          },
+          closing: {
+            name: "13. Checklist de Cierre de AuditorÃ­a",
+            items: [
+              "[ReuniÃ³n de cierre] Se realizÃ³ reuniÃ³n de cierre con los responsables del Ã¡rea",
+              "[ReuniÃ³n de cierre] Se presentaron los hallazgos y evidencias recopiladas",
+              "[ReuniÃ³n de cierre] Se aclararon dudas y se recibiÃ³ retroalimentaciÃ³n",
+              "[PresentaciÃ³n de resultados] Los hallazgos fueron comunicados de forma clara",
+              "[PresentaciÃ³n de resultados] Se clasificaron las no conformidades por criticidad",
+              "[PresentaciÃ³n de resultados] Se identificaron oportunidades de mejora",
+              "[Acuerdos y plan de acciÃ³n] Se acordaron acciones correctivas y responsables",
+              "[Acuerdos y plan de acciÃ³n] Se establecieron plazos para la implementaciÃ³n",
+              "[Acuerdos y plan de acciÃ³n] Se definieron medios de verificaciÃ³n del cumplimiento",
+              "[DocumentaciÃ³n y registros] Se completÃ³ el informe de auditorÃ­a",
+              "[DocumentaciÃ³n y registros] Se adjuntaron listas de verificaciÃ³n y evidencias",
+              "[DocumentaciÃ³n y registros] Los registros quedan archivados segÃºn procedimiento",
+              "[ComunicaciÃ³n de resultados] Se enviarÃ¡ el informe final a las partes interesadas",
+              "[ComunicaciÃ³n de resultados] Se comunicarÃ¡ a la alta direcciÃ³n (si aplica)",
+              "[ComunicaciÃ³n de resultados] Se mantendrÃ¡ registro de la comunicaciÃ³n realizada",
+              "[Seguimiento y verificaciÃ³n] Se programÃ³ la fecha de seguimiento",
+              "[Seguimiento y verificaciÃ³n] Existen indicadores para evaluar la eficacia",
+              "[Seguimiento y verificaciÃ³n] Se verificarÃ¡ la implementaciÃ³n de acciones",
+              "[EvaluaciÃ³n del proceso de auditorÃ­a] Se evaluÃ³ el desempeÃ±o del equipo auditor",
+              "[EvaluaciÃ³n del proceso de auditorÃ­a] Se identificaron mejoras para futuras auditorÃ­as",
+              "[EvaluaciÃ³n del proceso de auditorÃ­a] Se cumpliÃ³ el alcance y objetivos de la auditorÃ­a",
+              "[Cierre formal] Se dio por finalizada la auditorÃ­a oficialmente",
+              "[Cierre formal] Se agradeciÃ³ la colaboraciÃ³n del personal auditado",
+              "[Cierre formal] Se dejÃ³ constancia del cierre de la auditorÃ­a",
+            ],
+          },
+          corrective: {
+            name: "14. Checklist de Seguimiento de Acciones Correctivas",
+            items: [
+              "[IdentificaciÃ³n de la acciÃ³n] La acciÃ³n correctiva estÃ¡ claramente definida",
+              "[IdentificaciÃ³n de la acciÃ³n] Se identificÃ³ el origen y causa raÃ­z del hallazgo",
+              "[IdentificaciÃ³n de la acciÃ³n] La acciÃ³n estÃ¡ asociada al hallazgo correcto",
+              "[PlanificaciÃ³n] Se estableciÃ³ responsable de la acciÃ³n",
+              "[PlanificaciÃ³n] Se definiÃ³ fecha objetivo de implementaciÃ³n",
+              "[PlanificaciÃ³n] Los recursos necesarios estÃ¡n identificados",
+              "[ImplementaciÃ³n] La acciÃ³n correctiva fue implementada",
+              "[ImplementaciÃ³n] Se ejecutÃ³ segÃºn lo planificado",
+              "[ImplementaciÃ³n] Se documentÃ³ la implementaciÃ³n realizada",
+              "[Evidencias] Existen evidencias objetivas de la acciÃ³n",
+              "[Evidencias] Las evidencias son claras y verificables",
+              "[Evidencias] Las evidencias estÃ¡n fechadas y firmadas",
+              "[VerificaciÃ³n de eficacia] Se verificÃ³ que la acciÃ³n eliminÃ³ la causa raÃ­z",
+              "[VerificaciÃ³n de eficacia] No se han presentado reincidencias",
+              "[VerificaciÃ³n de eficacia] La acciÃ³n generÃ³ la mejora esperada",
+              "[Indicadores y resultados] Se evaluaron indicadores asociados",
+              "[Indicadores y resultados] Los resultados muestran mejora",
+              "[Indicadores y resultados] Se registra el impacto de la acciÃ³n",
+              "[ComunicaciÃ³n] Se comunicÃ³ el cierre a las partes interesadas",
+              "[ComunicaciÃ³n] Se difundieron las lecciones aprendidas",
+              "[ComunicaciÃ³n] El personal involucrado fue informado",
+              "[ActualizaciÃ³n documental] Se actualizaron procedimientos o instructivos",
+              "[ActualizaciÃ³n documental] Se actualizaron matrices o registros",
+              "[ActualizaciÃ³n documental] La documentaciÃ³n estÃ¡ disponible y vigente",
+              "[Cierre de acciÃ³n] La acciÃ³n correctiva fue cerrada formalmente",
+              "[Cierre de acciÃ³n] Se registrÃ³ la fecha de cierre",
+              "[Cierre de acciÃ³n] Se archiva la informaciÃ³n completa",
+            ],
+          },
+          finalCheck: {
+            name: "15. Checklist Final Antes de Entregar el Informe",
+            items: [
+              "[InformaciÃ³n general] Los datos generales del informe estÃ¡n completos",
+              "[InformaciÃ³n general] Se incluye el objetivo, alcance y criterios de la auditorÃ­a",
+              "[InformaciÃ³n general] Fechas, lugar y equipo auditor estÃ¡n correctos",
+              "[Resumen ejecutivo] El resumen refleja los hallazgos mÃ¡s relevantes",
+              "[Resumen ejecutivo] Se presentan las conclusiones principales",
+              "[Resumen ejecutivo] Las recomendaciones clave estÃ¡n destacadas",
+              "[Hallazgos y evidencias] Todos los hallazgos estÃ¡n documentados",
+              "[Hallazgos y evidencias] La evidencia es clara, suficiente y pertinente",
+              "[Hallazgos y evidencias] Las no conformidades estÃ¡n clasificadas correctamente",
+              "[AnÃ¡lisis y evaluaciÃ³n] El anÃ¡lisis de causas es coherente",
+              "[AnÃ¡lisis y evaluaciÃ³n] La evaluaciÃ³n del riesgo es adecuada",
+              "[AnÃ¡lisis y evaluaciÃ³n] Se incluyen referencias a requisitos aplicables",
+              "[Recomendaciones] Las recomendaciones son especÃ­ficas y viables",
+              "[Recomendaciones] EstÃ¡n alineadas con los riesgos identificados",
+              "[Recomendaciones] Se indican responsables sugeridos (si aplica)",
+              "[Plan de acciÃ³n / acciones correctivas] Se incluye plan de acciÃ³n para cada hallazgo",
+              "[Plan de acciÃ³n / acciones correctivas] Plazos y responsables estÃ¡n definidos",
+              "[Plan de acciÃ³n / acciones correctivas] Indicadores de seguimiento estÃ¡n establecidos",
+              "[Anexos y registros] Se adjuntan listas de verificaciÃ³n utilizadas",
+              "[Anexos y registros] Se incluyen registros fotogrÃ¡ficos (si aplica)",
+              "[Anexos y registros] Otros documentos de soporte estÃ¡n anexos",
+              "[Claridad y presentaciÃ³n] El informe estÃ¡ redactado de forma clara y profesional",
+              "[Claridad y presentaciÃ³n] La estructura y numeraciÃ³n son correctas",
+              "[Claridad y presentaciÃ³n] Tablas, grÃ¡ficos y formatos se leen correctamente",
+              "[RevisiÃ³n final] El informe fue revisado por el auditor lÃ­der",
+              "[RevisiÃ³n final] No contiene errores ortogrÃ¡ficos o de formato",
+              "[RevisiÃ³n final] La informaciÃ³n es consistente y verificable",
+              "[Listo para entrega] El informe estÃ¡ aprobado para su entrega",
+              "[Listo para entrega] Se cuenta con autorizaciÃ³n correspondiente",
+              "[Listo para entrega] Se enviarÃ¡ a las partes interesadas definidas",
+            ],
+          },
+        };
+
+        useEffect(() => {
+          const saved = localStorage.getItem("checklistDataHyS");
+          if (saved) {
+            const data = JSON.parse(saved);
+            setClientData(data.clientData);
+            setChecklistItems(data.checklistItems);
+            setObservations(data.observations);
+            setSelectedChecklist(data.selectedChecklist || "prep");
+          }
+        }, []);
+
+        useEffect(() => {
+          localStorage.setItem(
+            "checklistDataHyS",
+            JSON.stringify({
+              clientData,
+              checklistItems,
+              observations,
+              selectedChecklist,
+            }),
+          );
+        }, [clientData, checklistItems, observations, selectedChecklist]);
+
+        const handleClientDataChange = (field, value) => {
+          setClientData((prev) => ({ ...prev, [field]: value }));
+        };
+
+        const handleChecklistItemChange = (index, value) => {
+          const currentList = checklistItems[selectedChecklist] || {};
+          setChecklistItems((prev) => ({
+            ...prev,
+            [selectedChecklist]: { ...currentList, [index]: value },
+          }));
+        };
+
+        const generatePDF = () => {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF("l", "mm", "a4"); // landscape
+
+          let yPosition = 15;
+
+          // TÃ­tulo
+          doc.setFontSize(18);
+          doc.setTextColor(30, 64, 175); // Azul
+          doc.text("SISTEMA MAESTRO DE AUDITORÃAS HyS", 148, yPosition, {
+            align: "center",
+          });
+          yPosition += 8;
+
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          doc.text("Reporte de AuditorÃ­a", 148, yPosition, {
+            align: "center",
+          });
+          yPosition += 12;
+
+          // LÃ­nea separadora
+          doc.setDrawColor(30, 64, 175);
+          doc.setLineWidth(0.5);
+          doc.line(10, yPosition - 2, 286, yPosition - 2);
+          yPosition += 5;
+
+          // Datos del cliente
+          doc.setFontSize(10);
+          doc.setTextColor(30, 64, 175);
+          doc.text("DATOS DEL CLIENTE", 10, yPosition);
+          yPosition += 6;
+
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          doc.text(
+            `Empresa: ${clientData.company || "N/A"} | CUIT: ${clientData.cuit || "N/A"} | Fecha: ${clientData.visitDate || "N/A"} | Auditor: ${clientData.inspector || "N/A"}`,
+            10,
+            yPosition,
+          );
+          yPosition += 5;
+          doc.text(
+            `Domicilio: ${clientData.address || "N/A"} | TelÃ©fono: ${clientData.phone || "N/A"} | Email: ${clientData.email || "N/A"} | Sector: ${clientData.sector || "N/A"}`,
+            10,
+            yPosition,
+          );
+          yPosition += 8;
+
+          // Nombre del checklist
+          doc.setFontSize(10);
+          doc.setTextColor(30, 64, 175);
+          doc.text(
+            `CHECKLIST: ${checklists[selectedChecklist].name}`,
+            10,
+            yPosition,
+          );
+          yPosition += 8;
+
+          // Preparar datos para la tabla
+          const tableData = checklists[selectedChecklist].items.map(
+            (item, index) => {
+              const status =
+                checklistItems[selectedChecklist]?.[index] || "pending";
+              let statusText = "N/A";
+
+              if (status === "yes") {
+                statusText = "SÃ";
+              } else if (status === "no") {
+                statusText = "NO";
+              }
+
+              return [(index + 1).toString(), item, statusText];
+            },
+          );
+
+          // Generar tabla
+          doc.autoTable({
+            head: [["NÂ°", "ÃTEM DE AUDITORÃA", "ESTADO"]],
+            body: tableData,
+            startY: yPosition,
+            margin: { left: 10, right: 10 },
+            columnStyles: {
+              0: { cellWidth: 15, halign: "center", fontStyle: "bold" },
+              1: { cellWidth: 240, halign: "left" },
+              2: {
+                cellWidth: 25,
+                halign: "center",
+                fontStyle: "bold",
+                fontSize: 11,
+              },
+            },
+            headStyles: {
+              fillColor: [30, 64, 175],
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+              fontSize: 10,
+              halign: "center",
+              cellPadding: 5,
+            },
+            bodyStyles: {
+              fontSize: 9,
+              cellPadding: 4,
+              lineColor: [51, 51, 51],
+              fillColor: [255, 255, 255],
+            },
+            didParseCell: (data) => {
+              // Colorear solo el texto de la columna ESTADO (index 2)
+              if (data.section === "body" && data.column.index === 2) {
+                const statusText = data.cell.raw;
+
+                if (statusText === "SÃ") {
+                  data.cell.styles.textColor = [76, 175, 80]; // Verde
+                } else if (statusText === "NO") {
+                  data.cell.styles.textColor = [244, 67, 54]; // Rojo
+                } else if (statusText === "N/A") {
+                  data.cell.styles.textColor = [255, 152, 0]; // Naranja
+                }
+                data.cell.styles.fontStyle = "bold";
+                data.cell.styles.fontSize = 10;
+              }
+            },
+            pageBreak: "auto",
+          });
+
+          // Si hay observaciones, agregarlas en una nueva pÃ¡gina si es necesario
+          if (observations) {
+            let finalY = doc.lastAutoTable.finalY + 10;
+
+            if (finalY > 240) {
+              doc.addPage();
+              finalY = 15;
+            }
+
+            doc.setFontSize(11);
+            doc.setTextColor(220, 38, 38); // Rojo
+            doc.setFont(undefined, "bold");
+            doc.text("OBSERVACIONES", 10, finalY);
+            doc.setFont(undefined, "normal");
+            finalY += 8;
+
+            doc.setFontSize(9);
+            doc.setTextColor(0, 0, 0);
+            const obsLines = doc.splitTextToSize(observations, 276);
+            doc.text(obsLines, 10, finalY);
+          }
+
+          // Pie de pÃ¡gina en cada pÃ¡gina con leyenda mejorada
+          const pageCount = doc.internal.pages.length - 1;
+          for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const bottomY = pageHeight - 10;
+
+            // Leyenda mejorada
+            doc.text("Leyenda de Estados:", 10, bottomY);
+            doc.text(
+              "SÃ = Cumple | NO = No Cumple | N/A = No Aplica",
+              10,
+              bottomY + 4,
+            );
+            doc.text(
+              `Reporte generado el ${new Date().toLocaleDateString("es-AR")} a las ${new Date().toLocaleTimeString("es-AR")}`,
+              148,
+              bottomY + 4,
+              { align: "center" },
+            );
+          }
+
+          doc.save(
+            `checklist-auditoria-${clientData.company || "reporte"}-${clientData.visitDate}.pdf`,
+          );
+        };
+
+        const currentItems = checklists[selectedChecklist].items;
+        const currentChecks = checklistItems[selectedChecklist] || {};
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <div className="mb-4">
+                  <h1 className="text-3xl font-bold text-indigo-600">
+                    SISTEMA MAESTRO
+                  </h1>
+                  <p className="text-gray-600">
+                    AuditorÃ­as HyS - AplicaciÃ³n de Checklists
+                  </p>
+                </div>
+
+                <div className="flex gap-2 border-b border-gray-200 mb-6">
+                  <button
+                    onClick={() => setActiveTab("client-info")}
+                    className={`px-4 py-2 font-medium border-b-2 transition ${
+                      activeTab === "client-info"
+                        ? "border-indigo-600 text-indigo-600"
+                        : "border-transparent text-gray-600 hover:text-gray-800"
+                    }`}
+                  >
+                    Datos del Cliente
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("checklist")}
+                    className={`px-4 py-2 font-medium border-b-2 transition ${
+                      activeTab === "checklist"
+                        ? "border-indigo-600 text-indigo-600"
+                        : "border-transparent text-gray-600 hover:text-gray-800"
+                    }`}
+                  >
+                    Checklist
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                {activeTab === "client-info" && (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">
+                      InformaciÃ³n del Cliente
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        { key: "company", label: "Empresa" },
+                        { key: "cuit", label: "CUIT" },
+                        { key: "address", label: "Domicilio" },
+                        { key: "phone", label: "TelÃ©fono" },
+                        { key: "email", label: "Email" },
+                        { key: "sector", label: "Sector/Ãrea" },
+                        { key: "workers", label: "Cantidad de trabajadores" },
+                        {
+                          key: "visitDate",
+                          label: "Fecha de auditorÃ­a",
+                          type: "date",
+                        },
+                        {
+                          key: "inspector",
+                          label: "Auditor Responsable",
+                          md: "md:col-span-2",
+                        },
+                      ].map((field) => (
+                        <div key={field.key} className={field.md || ""}>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {field.label}
+                          </label>
+                          <input
+                            type={field.type || "text"}
+                            value={clientData[field.key]}
+                            onChange={(e) =>
+                              handleClientDataChange(field.key, e.target.value)
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "checklist" && (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                      <p className="text-sm text-blue-800 font-medium">
+                        ð¡ Selecciona un checklist, completa los items y
+                        descarga el PDF al final.
+                      </p>
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Seleccionar Checklist
+                      </label>
+                      <select
+                        value={selectedChecklist}
+                        onChange={(e) => setSelectedChecklist(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      >
+                        {Object.entries(checklists).map(([key, value]) => (
+                          <option key={key} value={key}>
+                            {value.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">
+                      {checklists[selectedChecklist].name}
+                    </h2>
+
+                    <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 rounded p-4">
+                      {currentItems.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded"
+                        >
+                          <div className="flex gap-1 flex-shrink-0">
+                            <button
+                              onClick={() =>
+                                handleChecklistItemChange(index, "yes")
+                              }
+                              className={`px-2 py-1 rounded text-sm font-medium transition ${
+                                currentChecks[index] === "yes"
+                                  ? "bg-green-500 text-white"
+                                  : "bg-gray-200 text-gray-700 hover:bg-green-200"
+                              }`}
+                            >
+                              â
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleChecklistItemChange(index, "no")
+                              }
+                              className={`px-2 py-1 rounded text-sm font-medium transition ${
+                                currentChecks[index] === "no"
+                                  ? "bg-red-500 text-white"
+                                  : "bg-gray-200 text-gray-700 hover:bg-red-200"
+                              }`}
+                            >
+                              â
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleChecklistItemChange(index, "pending")
+                              }
+                              className={`px-2 py-1 rounded text-sm font-medium transition ${
+                                currentChecks[index] === "pending" ||
+                                !currentChecks[index]
+                                  ? "bg-yellow-500 text-white"
+                                  : "bg-gray-200 text-gray-700 hover:bg-yellow-200"
+                              }`}
+                            >
+                              â
+                            </button>
+                          </div>
+                          <span className="text-gray-700 text-sm flex-1">
+                            {item}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Observaciones
+                      </label>
+                      <textarea
+                        value={observations}
+                        onChange={(e) => setObservations(e.target.value)}
+                        rows="4"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Escriba observaciones adicionales..."
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {activeTab === "checklist" && (
+                <div className="mt-8 flex gap-4 justify-center flex-wrap border-t pt-6">
+                  <button
+                    onClick={generatePDF}
+                    className="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-bold text-lg shadow-lg"
+                  >
+                    ð¥ Descargar PDF de esta secciÃ³n
+                  </button>
+                </div>
+              )}
+
+              {activeTab === "client-info" && (
+                <div className="mt-6 flex gap-4 justify-center flex-wrap">
+                  <p className="text-sm text-gray-600 w-full text-center">
+                    ð¡ Los datos se guardan automÃ¡ticamente
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-6 flex gap-4 justify-center flex-wrap">
+                <button
+                  onClick={() => {
+                    if (
+                      confirm("Â¿EstÃ¡s seguro? Se borrarÃ¡n todos los datos.")
+                    ) {
+                      localStorage.clear();
+                      setClientData({
+                        company: "",
+                        cuit: "",
+                        address: "",
+                        phone: "",
+                        email: "",
+                        sector: "",
+                        workers: "",
+                        visitDate: new Date().toISOString().split("T")[0],
+                        inspector: "",
+                      });
+                      setChecklistItems({});
+                      setObservations("");
+                      alert("Datos borrados correctamente");
+                    }
+                  }}
+                  className="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-medium"
+                >
+                  ðï¸ Limpiar Todo
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<ChecklistApp />);
+    </script>
+  </body>
+</html>
